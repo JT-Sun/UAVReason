@@ -1,10 +1,10 @@
 # UAVReason
 
-**UAVReason: A Unified, Large-Scale Benchmark for Multimodal Aerial Scene Reasoning and Generation**
+**Can Vision-Language Models Think from the Sky? Unifying UAV Reasoning and Generation**
 
 UAVReason 是一个面向无人机俯视视角的多模态推理与生成数据集，基于 UAVScenes RGB 图像构建，并提供 VQA / Caption 标注和深度数据，可用于 UAV 场景理解、空间推理、时序推理、航向推理、深度感知和跨模态生成等任务。
 
-> 本项目不修改 BAGEL 模型结构，只进行 UAVReason 数据格式与数据读取适配。请根据本地环境替换 README 中的所有路径。
+> 请根据本地环境替换 README 中的所有路径。
 
 ## Links
 
