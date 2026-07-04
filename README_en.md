@@ -1,0 +1,249 @@
+# UAVReason
+
+**UAVReason: A Unified, Large-Scale Benchmark for Multimodal Aerial Scene Reasoning and Generation**
+
+UAVReason is a multimodal aerial scene reasoning and generation dataset for nadir-view UAV images. It is built on UAVScenes RGB images and provides VQA / caption annotations and additional depth data. The dataset can be used for UAV scene understanding, spatial reasoning, temporal reasoning, heading reasoning, depth-aware perception, and cross-modal generation.
+
+> We do not modify the BAGEL model architecture. The adaptation is performed at the data-format and data-loading level. Please replace all paths according to your local environment.
+
+## Links
+
+- Paper: https://arxiv.org/abs/2604.05377
+- Code: https://github.com/JT-Sun/UAVReason
+- UAVReason HF repo: https://huggingface.co/datasets/jarvissun/UAVReason
+- UAVReason depth: https://huggingface.co/datasets/jarvissun/UAVReason_depth
+- UAVScenes: https://github.com/sijieaaa/UAVScenes
+
+> If the Hugging Face repositories are renamed or reorganized, please replace the links with the latest release URLs.
+
+## Data Components
+
+| Data | Format | Usage |
+|---|---|---|
+| Single-frame VQA | LLaVA-style JSONL | Single-image VQA, counting, attributes, spatial reasoning |
+| Two-frame VQA | LLaVA-style JSONL | Temporal change, distance change, relation change |
+| Heading VQA | LLaVA-style JSONL | UAV heading / motion direction reasoning |
+| Scene Caption | LLaVA-style JSONL | UAV scene captioning |
+| Depth | `.npy` / `_depth_vis.png` / stats | Depth supervision, depth visualization, RGB-Depth generation |
+| Generation data | i2i JSONL → parquet | BAGEL `unified_edit` cross-modal generation |
+
+## Recommended Directory Structure
+
+```bash
+UAVReason/
+├── UAVScenes/
+│   └── interval5_CAM_LIDAR/
+│       ├── interval5_AMtown01/
+│       ├── interval5_AMtown02/
+│       └── ...
+├── UAVReason_depth/
+│   ├── interval5_AMtown01/
+│   │   ├── 1658137057.641204937_depth.npy
+│   │   ├── 1658137057.641204937_depth_vis.png
+│   │   └── 1658137057.641204937_stats.json
+│   └── ...
+├── annotations/
+│   ├── llava_vqa_single_1f_anchor_train.jsonl
+│   ├── llava_vqa_temporal_2f_anchor_train.jsonl
+│   ├── llava_vqa_temporal_2f_IHeading_train.jsonl
+│   ├── llava_vqa_scene_caption.jsonl
+│   └── ...
+├── i2i_jsonl/
+│   ├── uav_rgb2depth.jsonl
+│   ├── uav_rgb2seg.jsonl
+│   ├── uav_d_text2rgb.jsonl
+│   ├── uav_seg_text2rgb.jsonl
+│   ├── uav_dseg_text2rgb.jsonl
+│   └── uav_recon.jsonl
+└── parquet/
+    └── uav_unified_edit/
+```
+
+## VQA / Caption Format
+
+VQA and caption annotations follow the LLaVA-style JSONL format. Each line is one sample:
+
+```json
+{
+  "image": [
+    "UAVScenes/interval5_CAM_LIDAR/interval5_AMtown02/interval5_CAM/1658133165.089699441.jpg"
+  ],
+  "conversations": [
+    {
+      "from": "human",
+      "value": "<image>\nIn this UAV frame, north is approximately towards the top-right of the image. Answer concisely. How many roofs are visible in the scene?"
+    },
+    {
+      "from": "gpt",
+      "value": "There are 5 roofs visible in the scene."
+    }
+  ],
+  "meta": {
+    "task": "uav_vqa_1f",
+    "scene": "interval5_AMtown02",
+    "stem": "1658133165.089699441",
+    "category": "Common Scenes",
+    "subtype": "B-Count"
+  }
+}
+```
+
+Notes:
+
+- Single-frame VQA contains one image.
+- Two-frame VQA and Heading VQA contain two images in the order `Image-1 → Image-2`.
+- Scene Caption uses UAV images as input and scene descriptions as output.
+- `meta` is used for task grouping, category-level statistics, and evaluation.
+
+## Depth Data
+
+Depth data contains:
+
+```bash
+{stem}_depth.npy
+{stem}_depth_vis.png
+{stem}_stats.json
+```
+
+`.npy` stores the original depth array, `_depth_vis.png` stores the grayscale depth visualization, and `_stats.json` stores depth statistics. For BAGEL training, depth is used as an image modality. By default, the pipeline prefers `.npy` depth files and converts them into grayscale depth images during data loading. If `.npy` is unavailable, `_depth_vis.png` can be used as fallback.
+
+## Using with BAGEL
+
+| UAVReason data | BAGEL branch | Format |
+|---|---|---|
+| VQA / Caption | `vlm_sft` | LLaVA-style JSONL |
+| RGB / Depth / Segmentation generation | `unified_edit` | parquet |
+
+### Register VQA / Caption
+
+Add the following entries to BAGEL `data/dataset_info.py`:
+
+```python
+"vlm_sft": {
+    "uav_vqa_1f": {
+        "data_dir": "/path/to/UAVReason",
+        "jsonl_path": "/path/to/annotations/llava_vqa_single_1f_anchor_train.jsonl",
+        "num_total_samples": 172037,
+    },
+    "uav_vqa_2f": {
+        "data_dir": "/path/to/UAVReason",
+        "jsonl_path": "/path/to/annotations/llava_vqa_temporal_2f_anchor_train.jsonl",
+        "num_total_samples": 57462,
+    },
+    "uav_vqa_iheading": {
+        "data_dir": "/path/to/UAVReason",
+        "jsonl_path": "/path/to/annotations/llava_vqa_temporal_2f_IHeading_train.jsonl",
+        "num_total_samples": 57456,
+    },
+    "uav_vqa_scene_caption": {
+        "data_dir": "/path/to/UAVReason",
+        "jsonl_path": "/path/to/annotations/llava_vqa_scene_caption.jsonl",
+        "num_total_samples": 19903,
+    },
+}
+```
+
+If image paths in JSONL are absolute paths, `data_dir` can be set to `/`. If image paths are relative paths, `data_dir` should point to the directory that contains `UAVScenes/`.
+
+### Build Generation Parquet
+
+Generation samples are first organized as ShareGPT-style image-to-image JSONL files and then converted into BAGEL `unified_edit` parquet:
+
+```bash
+python uav_jsonl_to_parquet_for_bagel.py \
+  --in_jsonl \
+    i2i_jsonl/uav_rgb2depth.jsonl \
+    i2i_jsonl/uav_rgb2seg.jsonl \
+    i2i_jsonl/uav_d_text2rgb.jsonl \
+    i2i_jsonl/uav_seg_text2rgb.jsonl \
+    i2i_jsonl/uav_dseg_text2rgb.jsonl \
+    i2i_jsonl/uav_recon.jsonl \
+  --out_dir parquet/uav_unified_edit \
+  --shard_size 5000 \
+  --prefer_depth npy \
+  --depth_npy_root /path/to/UAVReason_depth \
+  --depth_vis_root /path/to/UAVReason_depth \
+  --depth_npy_template "{scene}/{stem}_depth.npy" \
+  --overwrite
+```
+
+The output parquet contains:
+
+```text
+text        instruction
+image_list  source image path(s) + target image path
+task        task name
+```
+
+The last image in `image_list` is used as the target image.
+
+### Register Generation Data
+
+```python
+"unified_edit": {
+    "uav_unified_edit": {
+        "data_dir": "/path/to/parquet/uav_unified_edit",
+        "num_files": 32,
+        "num_total_samples": 159224,
+        "parquet_info_path": "/path/to/parquet/uav_unified_edit/parquet_info.json",
+    }
+}
+```
+
+If you regenerate the parquet shards, update `num_files` and `num_total_samples` according to the actual `parquet_info.json`.
+
+## Supported Tasks
+
+UAVReason can be used for, but is not limited to:
+
+- UAV visual question answering
+- UAV scene captioning
+- Single-frame spatial reasoning
+- Two-frame temporal reasoning
+- UAV heading / motion direction reasoning
+- RGB → Depth generation
+- RGB → Segmentation generation
+- Depth / Segmentation / Text → RGB generation
+- RGB / Depth / Segmentation reconstruction
+- UAV multimodal model adaptation and evaluation
+
+## BAGEL Joint SFT Example
+
+```bash
+torchrun \
+  --nnodes=$num_nodes \
+  --node_rank=$node_rank \
+  --nproc_per_node=$nproc_per_node \
+  --master_addr=$master_addr \
+  --master_port=$master_port \
+  train/pretrain_unified_navit.py \
+  --dataset_config_file ./data/configs/uav_mix.yaml \
+  --model_path /path/to/BAGEL-7B-MoT \
+  --layer_module Qwen2MoTDecoderLayer \
+  --max_latent_size 64 \
+  --resume-from /path/to/BAGEL-7B-MoT \
+  --finetune_from_hf True \
+  --auto_resume True \
+  --resume-model-only True \
+  --finetune-from-ema True \
+  --visual_und True \
+  --visual_gen True \
+  --results_dir results/uavreason_bagel \
+  --checkpoint_dir results/uavreason_bagel/checkpoints \
+  --lr 2e-5 \
+  --num_workers 1 \
+  --expected_num_tokens 10240 \
+  --max_num_tokens 11520 \
+  --max_num_tokens_per_sample 10240
+```
+
+## Citation
+
+```bibtex
+@article{sun2026uavreason,
+  title={UAVReason: A Unified, Large-Scale Benchmark for Multimodal Aerial Scene Reasoning and Generation},
+  author={Sun, Jintao and Zhang, Hu and Di, Donglin and Ding, Gangyi and Zheng, Zhedong},
+  journal={arXiv preprint arXiv:2604.05377},
+  year={2026}
+}
+```
