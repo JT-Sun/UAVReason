@@ -1,10 +1,10 @@
 # UAVReason
 
-**UAVReason: A Unified, Large-Scale Benchmark for Multimodal Aerial Scene Reasoning and Generation**
+**Can Vision-Language Models Think from the Sky? Unifying UAV Reasoning and Generation**
 
 UAVReason is a multimodal aerial scene reasoning and generation dataset for nadir-view UAV images. It is built on UAVScenes RGB images and provides VQA / caption annotations and additional depth data. The dataset can be used for UAV scene understanding, spatial reasoning, temporal reasoning, heading reasoning, depth-aware perception, and cross-modal generation.
 
-> We do not modify the BAGEL model architecture. The adaptation is performed at the data-format and data-loading level. Please replace all paths according to your local environment.
+> Please replace all paths according to your local environment.
 
 ## Links
 
