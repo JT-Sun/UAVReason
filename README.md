@@ -280,10 +280,13 @@ torchrun \
 ## Citation
 
 ```bibtex
-@article{sun2026uavreason,
-  title={UAVReason: A Unified, Large-Scale Benchmark for Multimodal Aerial Scene Reasoning and Generation},
-  author={Sun, Jintao and Zhang, Hu and Di, Donglin and Ding, Gangyi and Zheng, Zhedong},
-  journal={arXiv preprint arXiv:2604.05377},
-  year={2026}
+@misc{sun2026visionlanguagemodelsthinksky,
+      title={Can Vision-Language Models Think from the Sky? Unifying UAV Reasoning and Generation}, 
+      author={Jintao Sun and Gangyi Ding and Donglin Di and Hu Zhang and Zhedong Zheng},
+      year={2026},
+      eprint={2604.05377},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2604.05377}, 
 }
 ```
